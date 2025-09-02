@@ -1,10 +1,13 @@
 // tailwind.config.js
 module.exports = {
+  content: ["./app/**/*.{js,jsx}", "./components/**/*.{js,jsx}"],
   theme: {
     extend: {
       fontFamily: {
-        jua: ["var(--font-jua)", "sans-serif"],
+        sans: ["var(--font-noto-sans-kr)", "sans-serif"], // 구글 폰트
+        hand: ["var(--font-hand)", "sans-serif"], // 로컬 폰트
       },
     },
   },
+  plugins: [],
 };

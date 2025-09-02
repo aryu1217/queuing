@@ -1,6 +1,8 @@
 "use client";
 
+import Header from "@/components/header";
 import { useMyProfile } from "@/hooks/useMyProfile";
+import Cookies from "js-cookie";
 
 export default function MainPage() {
   const { data: profile, isLoading, isError, error } = useMyProfile();
@@ -11,9 +13,8 @@ export default function MainPage() {
 
   // 로그인하지 않았거나 프로필이 없으면 profile이 null일 수 있음
   return (
-    <div className="bg-[#FDFDFD] h-screen p-6 text-black">
-      <div>main page입니다.</div>
-      <div>nickname: {profile?.nickname ?? "게스트"}</div>
+    <div className="bg-[#FFFAFA] h-screen p-6 text-[#17171B]">
+      <Header />
     </div>
   );
 }

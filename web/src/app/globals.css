@@ -8,19 +8,6 @@
     BlinkMacSystemFont, system-ui, sans-serif;
 }
 
-/* ⬇️ 여기서 font 토큰들을 선언 */
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-
-  /* 기존 geist 변수들 */
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-
-  /* ✅ Jua 토큰 추가: next/font가 html에 주입한 --font-jua 변수를 연결 */
-  --font-jua: var(--font-jua);
-}
-
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -31,5 +18,9 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-pretendard-rounded); /* 기본은 프리텐다드 라운디드 */
+  font-family: var(--font-pretendard-rounded); /* 기본 */
+}
+
+.font-hand {
+  font-family: var(--font-hand), "Pretendard Rounded", system-ui, sans-serif;
 }
