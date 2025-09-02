@@ -3,12 +3,36 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
+import { createClient } from "@/utils/supabase/client";
+
 export default function LoginPage() {
+  const supabase = createClient();
+
   const router = useRouter();
   const search = useSearchParams();
   const [nickname, setNickname] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+
+  // 1~8자, 한글/영문/숫자/_/- 허용
+  const nicknameRegex = /^[가-힣a-zA-Z0-9_-]{1,8}$/;
+
+  function validateNickname(nickname) {
+    if (!nicknameRegex.test(nickname)) {
+      return "닉네임은 한글/영문/숫자/_/-만 사용 가능하며 1~8자여야 합니다.";
+    }
+    return null;
+  }
+
+  function handleGoogleLogin() {
+    supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${location.origin}/auth/post-login?next=/main`,
+        queryParams: { access_type: "offline", prompt: "consent" },
+      },
+    });
+  }
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -17,6 +41,12 @@ export default function LoginPage() {
     const value = nickname.trim();
     if (!value) {
       setErr("닉네임을 입력해 주세요.");
+      return;
+    }
+
+    const error = validateNickname(value);
+    if (error) {
+      setErr(error);
       return;
     }
 
@@ -83,13 +113,12 @@ export default function LoginPage() {
           <div className="flex-grow h-px bg-gray-300" />
         </div>
 
-        {/* 구글 로그인 버튼 (후에 Supabase OAuth 연결) */}
         <button
           type="button"
-          className="w-full inline-flex items-center justify-center gap-2 rounded-3xl border border-gray-300 bg-white py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+          className="w-full inline-flex items-center justify-center gap-2 rounded-3xl border border-gray-300 bg-white py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
           onClick={() => {
             // const supabase = createClient()
-            // supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/auth/callback` } })
+            handleGoogleLogin();
           }}
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
