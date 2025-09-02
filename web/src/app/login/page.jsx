@@ -1,9 +1,13 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { createClient } from "@/utils/supabase/client";
+
+import { useMyProfile } from "@/hooks/useMyProfile";
+
+import Cookies from "js-cookie";
 
 export default function LoginPage() {
   const supabase = createClient();
@@ -13,6 +17,22 @@ export default function LoginPage() {
   const [nickname, setNickname] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+
+  const { data: profile, isLoading } = useMyProfile();
+
+  useEffect(() => {
+    if (!isLoading && profile?.nickname) {
+      router.replace("/main");
+    }
+
+    if (Cookies.get("nickname")) {
+      router.replace("/main");
+    }
+  }, [isLoading, profile, router]);
+
+  if (isLoading) {
+    return <div>확인 중...</div>;
+  }
 
   // 1~8자, 한글/영문/숫자/_/- 허용
   const nicknameRegex = /^[가-힣a-zA-Z0-9_-]{1,8}$/;
