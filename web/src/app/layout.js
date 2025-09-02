@@ -1,16 +1,19 @@
 import { Jua } from "next/font/google";
 import "./globals.css";
+import Providers from "./providers";
 
 const jua = Jua({
-  weight: "400", // 단일 굵기
-  subsets: ["latin"], // korean 쓰면 에러
+  weight: "400",
+  subsets: ["latin"], // 현재 설정 그대로 OK
   variable: "--font-jua",
 });
 
 export default function RootLayout({ children }) {
   return (
     <html lang="ko" className={jua.variable}>
-      <body>{children}</body>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

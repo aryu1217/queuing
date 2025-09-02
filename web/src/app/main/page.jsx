@@ -1,7 +1,19 @@
+"use client";
+
+import { useMyProfile } from "@/hooks/useMyProfile";
+
 export default function MainPage() {
+  const { data: profile, isLoading, isError, error } = useMyProfile();
+
+  if (isLoading) return <div className="p-6">로딩…</div>;
+  if (isError)
+    return <div className="p-6 text-red-500">에러: {error.message}</div>;
+
+  // 로그인하지 않았거나 프로필이 없으면 profile이 null일 수 있음
   return (
-    <div className="bg-[#FDFDFD] h-screen">
+    <div className="bg-[#FDFDFD] h-screen p-6 text-black">
       <div>main page입니다.</div>
+      <div>nickname: {profile?.nickname ?? "게스트"}</div>
     </div>
   );
 }
