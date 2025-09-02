@@ -1,6 +1,7 @@
 "use client";
 
 import Header from "@/components/header";
+import RoomList from "@/components/room-list";
 import { useMyProfile } from "@/hooks/useMyProfile";
 import Cookies from "js-cookie";
 
@@ -15,6 +16,7 @@ export default function MainPage() {
   return (
     <div className="bg-[#FFFAFA] h-screen p-6 text-[#17171B]">
       <Header />
+      <RoomList />
     </div>
   );
 }
