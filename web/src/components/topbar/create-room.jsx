@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import Modal from "@/components/ui/modal";
-import { PlusCircle, X } from "lucide-react";
+import { ArrowUpDown, PlusCircle, X } from "lucide-react";
 import { TAG_META, tagLabel, tagClasses } from "@/constants/tags";
 
 export default function CreateRoom() {
@@ -19,7 +19,7 @@ export default function CreateRoom() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-full bg-[#17171B] px-4 py-2 text-sm font-medium text-[#FFFAFA] hover:opacity-90"
+        className="inline-flex h-8 items-center whitespace-nowrap select-none gap-1.5 rounded-full border border-gray-200 bg-[#17171B] px-3 text-[13px] leading-none font-medium text-white hover:opacity-90"
       >
         <PlusCircle className="h-4 w-4" />
         방생성

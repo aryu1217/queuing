@@ -17,10 +17,7 @@ export default function TopBar() {
           </div>
 
           {/* 버튼 묶음은 내용 크기만큼만 */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <SortButton />
-            <CreateRoom />
-          </div>
+          <div className="flex items-center gap-2 flex-shrink-0"></div>
         </div>
       </div>
     </div>

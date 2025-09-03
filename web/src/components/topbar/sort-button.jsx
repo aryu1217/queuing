@@ -1,4 +1,3 @@
-// src/components/topbar/sort-button.jsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -39,7 +38,7 @@ export default function SortButton({ options = DEFAULT_OPTIONS }) {
         onClick={() => setOpenSort((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={openSort}
-        className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm text-[#17171B] hover:bg-gray-50"
+        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm text-[#17171B] hover:bg-gray-50"
       >
         <ArrowUpDown className="h-4 w-4" />
         <span className="font-medium">정렬</span>
@@ -54,7 +53,7 @@ export default function SortButton({ options = DEFAULT_OPTIONS }) {
             <button
               key={label}
               type="button"
-              className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-[#17171B] hover:bg-gray-50"
+              className="flex w-full items-center gap-2 whitespace-nowrap px-4 py-2.5 text-sm text-[#17171B] hover:bg-gray-50"
             >
               <Check className="h-4 w-4 opacity-0" />
               {label}
