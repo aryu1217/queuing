@@ -2,6 +2,7 @@
 
 import Header from "@/components/header";
 import RoomList from "@/components/room-list";
+import TagBar from "@/components/topbar/tag-bar";
 import TopBar from "@/components/topbar/top-bar";
 import Spinner from "@/components/ui/spinner";
 import { useMyProfile } from "@/hooks/useMyProfile";
@@ -18,7 +19,7 @@ export default function MainPage() {
   return (
     <div className="bg-[#FFFFFF] h-screen p-6 text-[#17171B]">
       <Header />
-
+      <TagBar />
       <RoomList />
     </div>
   );

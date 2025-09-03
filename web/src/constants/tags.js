@@ -8,7 +8,6 @@ export const TAG_META = {
   study: { label: "Study", bg: "bg-emerald-100 dark:bg-emerald-900/30" },
 };
 
-// 프리셋에 없는 태그용 파스텔 팔레트(배경만)
 const PALETTE = [
   "bg-rose-100 dark:bg-rose-900/30",
   "bg-cyan-100 dark:bg-cyan-900/30",
@@ -33,8 +32,6 @@ export function tagLabel(tag) {
   return TAG_META[key]?.label ?? tag;
 }
 
-// ✅ 텍스트 컬러는 항상 단색: 라이트(#17171B), 다크(white)
-//    읽기성 향상을 위해 얇은 보더 추가
 export function tagClasses(tag) {
   const key = normalizeTag(tag);
   const bg = TAG_META[key]?.bg ?? PALETTE[hash(key) % PALETTE.length];

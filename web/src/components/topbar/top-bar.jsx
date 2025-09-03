@@ -3,7 +3,7 @@
 
 import SearchBar from "./search-bar";
 import SortButton from "./sort-button";
-import FilterToggle from "./filter-toggle";
+import FilterToggle from "./tag-bar";
 import CreateRoom from "./create-room";
 
 export default function TopBar() {
@@ -19,7 +19,6 @@ export default function TopBar() {
           {/* 버튼 묶음은 내용 크기만큼만 */}
           <div className="flex items-center gap-2 flex-shrink-0">
             <SortButton />
-            <FilterToggle />
             <CreateRoom />
           </div>
         </div>

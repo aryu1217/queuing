@@ -44,7 +44,7 @@ export default function Header() {
   const nickname = profile?.nickname ?? Cookies.get("nickname");
 
   return (
-    <header className="relative z-50 isolate  bg-white py-3 px-6">
+    <header className="relative z-50 isolate  bg-white py-3 px-6 mt-[-15px]">
       <div className="flex items-center justify-between">
         {/* 왼쪽 로고/타이틀 */}
         <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900">

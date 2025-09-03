@@ -11,7 +11,7 @@ export default function RoomList() {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 pt-5">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 pt-5 px-4">
       {DummyRooms.map((room) => (
         <RoomCard key={room.id} room={room} onJoin={handleJoin} />
       ))}

@@ -30,7 +30,7 @@ export default function RoomCard({ room, onJoin }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-gray-300/10 p-4 shadow-sm hover:shadow-md hover:bg-gray-300/20 transition">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-2xl font-semibold text-[#17171B] font-hand truncate">
+        <h3 className="text-md font-semibold text-[#17171B]truncate">
           {title}
         </h3>
         {isPrivate && (
@@ -97,11 +97,11 @@ export default function RoomCard({ room, onJoin }) {
         <button
           onClick={() => !isFull && onJoin?.(room)}
           disabled={isFull && !isUnlimited}
-          className={`rounded-full px-4 py-1.5 text-xs font-medium transition font-hand
+          className={`rounded-full px-4 py-1.5 text-xs  transition
             ${
               isFull && !isUnlimited
                 ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                : "bg-[#17171B] text-[#FFFAFA] hover:opacity-90"
+                : "bg-[#17171B] text-[#FFFFFF] hover:opacity-90"
             }`}
         >
           입장하기
