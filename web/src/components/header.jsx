@@ -7,6 +7,7 @@ import { Music2, Power } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Spinner from "./ui/spinner";
 import SearchBar from "./topbar/search-bar";
+import Image from "next/image";
 
 export default function Header() {
   const { data: profile, isLoading, isError, error } = useMyProfile();
@@ -48,7 +49,13 @@ export default function Header() {
       <div className="grid grid-cols-[auto_1fr_auto] items-center">
         {/* 왼쪽 로고 */}
         <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
-          <Music2 className="w-7 h-7" />
+          <Image
+            src="/queuing-logo-mark.svg"
+            alt="Queuing"
+            width={32}
+            height={32}
+            className="mr-[-5px]"
+          />
           큐잉
         </h1>
 

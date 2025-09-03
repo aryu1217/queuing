@@ -1,0 +1,8 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer Q ring -->
+  <circle cx="512" cy="480" r="320" stroke="#17171B" stroke-width="96" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Q tail -->
+  <path d="M700 668 L812 780" stroke="#17171B" stroke-width="96" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Play triangle -->
+  <path d="M460 340 L650 480 L460 620 Z" fill="#17171B"/>
+</svg>
