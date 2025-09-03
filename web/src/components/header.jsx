@@ -43,7 +43,7 @@ export default function Header() {
   const nickname = profile?.nickname ?? Cookies.get("nickname");
 
   return (
-    <header className="border-b border-gray-400 bg-[#FFFAFA] pb-4 pt-0">
+    <header className="relative z-50 isolate border-b border-gray-400 bg-[#FFFAFA] pb-4 pt-0 ">
       <div className="relative flex items-center justify-center">
         {/* 가운데 타이틀 */}
         <h1 className="flex items-center gap-2 text-5xl font-normal text-[#17171B] font-hand">
@@ -72,7 +72,7 @@ export default function Header() {
                 <div
                   role="menu"
                   // 버튼의 padding-right(px-3=0.75rem)만큼 우측 보정해 텍스트 끝과 정렬
-                  className="absolute top-full mt-2 right-[0.75rem] z-50 w-44 rounded-xl border border-black/5 bg-gray-900/2 backdrop-blur-sm shadow-lg ring-1 ring-black/5 overflow-hidden"
+                  className=" absolute top-full mt-2 right-[0.75rem] z-50 w-44 rounded-xl border border-black/5 bg-gray-900/2 backdrop-blur-sm shadow-lg ring-1 ring-black/5 overflow-hidden"
                 >
                   <button
                     type="button"
