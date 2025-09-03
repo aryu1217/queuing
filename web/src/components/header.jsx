@@ -5,6 +5,7 @@ import { useMyProfile } from "@/hooks/useMyProfile";
 import Cookies from "js-cookie";
 import { Music2, Power } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Spinner from "./ui/spinner";
 
 export default function Header() {
   const { data: profile, isLoading, isError, error } = useMyProfile();
@@ -35,7 +36,7 @@ export default function Header() {
     };
   }, []);
 
-  if (isLoading) return <div className="p-6">로딩…</div>;
+  if (isLoading) return <Spinner />;
   if (isError)
     return <div className="p-6 text-red-500">에러: {error.message}</div>;
 
