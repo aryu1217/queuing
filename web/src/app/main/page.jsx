@@ -16,9 +16,9 @@ export default function MainPage() {
 
   // 로그인하지 않았거나 프로필이 없으면 profile이 null일 수 있음
   return (
-    <div className="bg-[#FFFAFA] h-screen p-6 text-[#17171B]">
+    <div className="bg-[#FFFFFF] h-screen p-6 text-[#17171B]">
       <Header />
-      <TopBar />
+
       <RoomList />
     </div>
   );

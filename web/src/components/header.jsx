@@ -6,6 +6,7 @@ import Cookies from "js-cookie";
 import { Music2, Power } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Spinner from "./ui/spinner";
+import TopBar from "./topbar/top-bar";
 
 export default function Header() {
   const { data: profile, isLoading, isError, error } = useMyProfile();
@@ -43,51 +44,50 @@ export default function Header() {
   const nickname = profile?.nickname ?? Cookies.get("nickname");
 
   return (
-    <header className="relative z-50 isolate border-b border-gray-400 bg-[#FFFAFA] pb-4 pt-0 ">
-      <div className="relative flex items-center justify-center">
-        {/* 가운데 타이틀 */}
-        <h1 className="flex items-center gap-2 text-5xl font-normal text-[#17171B] font-hand">
-          <Music2 className="w-8 h-8 mt-2" />
+    <header className="relative z-50 isolate  bg-white py-3 px-6">
+      <div className="flex items-center justify-between">
+        {/* 왼쪽 로고/타이틀 */}
+        <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
+          <Music2 className="w-7 h-7" />
           큐잉
         </h1>
 
-        {/* 오른쪽 상단 닉네임 */}
-        {nickname && (
-          <div
-            className="absolute right-0 top-1/2 -translate-y-1/2"
-            ref={wrapRef}
-          >
-            <div className="relative inline-block">
-              <button
-                type="button"
-                onClick={() => setOpen((v) => !v)}
-                aria-haspopup="menu"
-                aria-expanded={open}
-                className="px-3 py-1 rounded-full text-3xl font-medium text-[#17171B] cursor-pointer transition-colors hover:bg-gray-200 font-hand"
-              >
-                {nickname}
-              </button>
+        {/* 가운데 TopBar */}
+        <div className="absolute left-1/2 -translate-x-1/2">
+          <TopBar />
+        </div>
 
-              {open && (
-                <div
-                  role="menu"
-                  // 버튼의 padding-right(px-3=0.75rem)만큼 우측 보정해 텍스트 끝과 정렬
-                  className=" absolute top-full mt-2 right-[0.75rem] z-50 w-44 rounded-xl border border-black/5 bg-gray-900/2 backdrop-blur-sm shadow-lg ring-1 ring-black/5 overflow-hidden"
+        {/* 오른쪽 닉네임 */}
+        {nickname && (
+          <div className="relative" ref={wrapRef}>
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={open}
+              className="px-3 py-1 rounded-full text-lg font-semibold text-gray-800 cursor-pointer transition-colors hover:bg-gray-100"
+            >
+              {nickname}
+            </button>
+
+            {open && (
+              <div
+                role="menu"
+                className="absolute top-full mt-2 right-0 z-50 w-44 rounded-xl border border-black/5 bg-white shadow-lg ring-1 ring-black/5 overflow-hidden"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                 >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOpen(false);
-                      handleLogout();
-                    }}
-                    className="w-full flex items-center gap-2 px-4 py-3 text-red-600 hover:bg-red-700/10 hover:text-red-700 transition-colors font-hand cursor-pointer"
-                  >
-                    <Power className="w-5 h-5" />
-                    로그아웃
-                  </button>
-                </div>
-              )}
-            </div>
+                  <Power className="w-5 h-5" />
+                  로그아웃
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
