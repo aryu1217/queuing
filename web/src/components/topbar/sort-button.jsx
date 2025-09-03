@@ -3,13 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpDown, Check } from "lucide-react";
 
-const DEFAULT_OPTIONS = [
-  "인기순",
-  "최신순",
-  "인원 많은 순",
-  "인원 적은 순",
-  "제목 A→Z",
-];
+const DEFAULT_OPTIONS = ["인기순", "최신순", "인원 많은 순", "인원 적은 순"];
 
 export default function SortButton({ options = DEFAULT_OPTIONS }) {
   const sortRef = useRef(null);
@@ -38,7 +32,7 @@ export default function SortButton({ options = DEFAULT_OPTIONS }) {
         onClick={() => setOpenSort((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={openSort}
-        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm text-[#17171B] hover:bg-gray-50"
+        className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm text-[#17171B] hover:bg-gray-50"
       >
         <ArrowUpDown className="h-4 w-4" />
         <span className="font-medium">정렬</span>
@@ -47,7 +41,7 @@ export default function SortButton({ options = DEFAULT_OPTIONS }) {
       {openSort && (
         <div
           role="menu"
-          className="absolute right-0 top-full mt-2 w-44 overflow-hidden rounded-xl border border-black/5 bg-white shadow-lg ring-1 ring-black/5"
+          className="absolute right-0 top-full mt-2 w-44 overflow-hidden rounded-xl border border-black/5 bg-white/80 shadow-lg ring-1 ring-black/5"
         >
           {options.map((label) => (
             <button

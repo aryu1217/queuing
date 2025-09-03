@@ -19,7 +19,7 @@ export default function CreateRoom() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-8 items-center whitespace-nowrap select-none gap-1.5 rounded-full border border-gray-200 bg-[#17171B] px-3 text-[13px] leading-none font-medium text-white hover:opacity-90"
+        className="inline-flex h-8 items-center cursor-pointer whitespace-nowrap select-none gap-1.5 rounded-full border border-gray-200 bg-[#17171B] px-3 text-[13px] leading-none font-medium text-white hover:opacity-90"
       >
         <PlusCircle className="h-4 w-4" />
         방생성

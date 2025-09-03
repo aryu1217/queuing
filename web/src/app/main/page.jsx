@@ -5,7 +5,6 @@ import RoomList from "@/components/room-list";
 import CreateRoom from "@/components/topbar/create-room";
 import SortButton from "@/components/topbar/sort-button";
 import TagBar from "@/components/topbar/tag-bar";
-import TopBar from "@/components/topbar/top-bar";
 import Spinner from "@/components/ui/spinner";
 import { useMyProfile } from "@/hooks/useMyProfile";
 import Cookies from "js-cookie";

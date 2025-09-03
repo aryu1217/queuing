@@ -15,7 +15,7 @@ export default function SearchBar() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="방 이름이나 태그로 검색"
-          className="w-full rounded-full border border-gray-200 bg-white pl-9 pr-9 py-2 text-sm text-[#17171B] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#17171B]/20"
+          className="w-full rounded-full border border-gray-200 bg-white pl-9 pr-9 py-2 text-sm text-[#17171B] placeholder:text-gray-400 focus:outline-none"
         />
         {q && (
           <button
