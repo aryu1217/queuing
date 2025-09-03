@@ -4,11 +4,22 @@ import { useEffect, useRef, useState } from "react";
 import { useMyProfile } from "@/hooks/useMyProfile";
 import Cookies from "js-cookie";
 import { Music2, Power } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function Header() {
   const { data: profile, isLoading, isError, error } = useMyProfile();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
+
+  const router = useRouter();
+
+  function handleLogout() {
+    Cookies.remove("nickname", { path: "/" });
+
+    fetch("/api/auth/signOut", { method: "POST" }).finally(() =>
+      router.replace("/login")
+    );
+  }
 
   useEffect(() => {
     const onClickOutside = (e) => {
@@ -66,7 +77,7 @@ export default function Header() {
                     type="button"
                     onClick={() => {
                       setOpen(false);
-                      // TODO: 로그아웃 로직 연결
+                      handleLogout();
                     }}
                     className="w-full flex items-center gap-2 px-4 py-3 text-red-600 hover:bg-red-700/10 hover:text-red-700 transition-colors font-hand cursor-pointer"
                   >
