@@ -49,7 +49,7 @@ export default function TopBar() {
   }
 
   return (
-    <header className="sticky top-0 z-20 w-full bg-white/90 backdrop-blur border-b border-gray-100">
+    <header className="sticky top-0 z-20 w-full bg-white/90 backdrop-blur border-b border-gray-200">
       <div className="mx-auto flex h-14 items-center justify-between px-4">
         {/* Left */}
         <div className="flex items-center gap-3">

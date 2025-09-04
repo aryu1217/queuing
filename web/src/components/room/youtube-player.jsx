@@ -1,17 +1,19 @@
 // src/components/room/youtube-player.jsx
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import Spinner from "../ui/spinner";
 
 export default function YoutubePlayer({
   videoId = "M7lc1UVf-VE",
   autoplay = false,
 }) {
-  const wrapRef = useRef(null); // 라운딩/비율 적용하는 래퍼
-  const mountRef = useRef(null); // YT.Player가 붙는 div
+  const wrapRef = useRef(null);
+  const mountRef = useRef(null);
   const playerRef = useRef(null);
 
-  // API 로더 (중복 로드 방지)
+  const [currentTitle, setCurrentTitle] = useState("");
+
   useEffect(() => {
     let cancelled = false;
 
@@ -36,14 +38,13 @@ export default function YoutubePlayer({
       const YT = await loadAPI();
       if (cancelled || !mountRef.current) return;
 
-      // 기존 파괴
       if (playerRef.current?.destroy) playerRef.current.destroy();
 
       playerRef.current = new YT.Player(mountRef.current, {
         videoId,
         host: "https://www.youtube.com",
-        width: "100%", // ← 컨테이너 100%
-        height: "100%", // ← 컨테이너 100%
+        width: "100%",
+        height: "100%",
         playerVars: {
           autoplay: autoplay ? 1 : 0,
           playsinline: 1,
@@ -53,9 +54,11 @@ export default function YoutubePlayer({
           origin: window.location.origin,
         },
         events: {
+          // 방 입장 시 1회
           onReady: (e) => {
-            // 한 번 컨테이너 실제 사이즈로 보정
             sizeToContainer();
+            const data = e.target.getVideoData();
+            if (data?.title) setCurrentTitle(data.title);
             if (autoplay) {
               try {
                 e.target.mute();
@@ -63,10 +66,19 @@ export default function YoutubePlayer({
               e.target.playVideo();
             }
           },
+          // 영상 바뀔 때 (cue/play 시 제목 갱신)
+          onStateChange: (e) => {
+            if (
+              e.data === YT.PlayerState.CUED ||
+              e.data === YT.PlayerState.PLAYING
+            ) {
+              const data = e.target.getVideoData();
+              if (data?.title) setCurrentTitle(data.title);
+            }
+          },
         },
       });
 
-      // 컨테이너 리사이즈에 맞춰 iframe 크기 갱신
       const ro = new ResizeObserver(() => sizeToContainer());
       if (wrapRef.current) ro.observe(wrapRef.current);
 
@@ -77,10 +89,6 @@ export default function YoutubePlayer({
         const { width, height } = el.getBoundingClientRect();
         p.setSize(width, height);
       }
-
-      return () => {
-        ro.disconnect();
-      };
     }
 
     init();
@@ -92,13 +100,29 @@ export default function YoutubePlayer({
   }, [videoId, autoplay]);
 
   return (
-    // 비율 + 라운딩 + 가운데(절대배치로 꽉 채움)
-    <div
-      ref={wrapRef}
-      className="relative w-[800px] aspect-video rounded-2xl overflow-hidden bg-black"
-    >
-      {/* 이 div 안에 iframe이 생성됨 */}
-      <div ref={mountRef} className="absolute inset-0" />
+    <div className="w-full">
+      {/* 플레이어 (16:9 비율 유지) */}
+      <div
+        ref={wrapRef}
+        className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black"
+      >
+        {/* YouTube iframe이 여기 붙음 */}
+        <div ref={mountRef} className="absolute inset-0" />
+      </div>
+
+      {/* ↓↓↓ 영상 아래 일반 텍스트 캡션 */}
+      <div className="mt-3 text-sm text-[#17171B] ">
+        {currentTitle ? (
+          <span className="font-medium">{currentTitle}</span>
+        ) : (
+          <div className="inline-flex items-center gap-2">
+            <Spinner />
+            <span className="text-gray-500 whitespace-nowrap ">
+              노래 정보를 불러오는 중…
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
