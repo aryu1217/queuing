@@ -5,6 +5,7 @@ import { useState } from "react";
 import Modal from "@/components/ui/modal";
 import { ArrowUpDown, PlusCircle, X } from "lucide-react";
 import { TAG_META, tagLabel, tagClasses } from "@/constants/tags";
+import { useRouter } from "next/navigation";
 
 export default function CreateRoom() {
   const [open, setOpen] = useState(false);
@@ -12,6 +13,19 @@ export default function CreateRoom() {
 
   // 프리셋 태그 목록
   const tags = Object.keys(TAG_META);
+
+  const MOCK_ROOM_ID = "abc123";
+
+  const router = useRouter();
+
+  const goTempRoom = () => {
+    setOpen(false);
+    // 뒤로가기로 모달 안 돌아오게 하려면 replace 사용
+    // router.replace(`/room/${MOCK_ROOM_ID}`);
+    router.push(`/room/${MOCK_ROOM_ID}`);
+    // 필요하면 쿼리도 덧붙일 수 있음: `?from=create`
+    // router.push(`/room/${MOCK_ROOM_ID}?from=create`);
+  };
 
   return (
     <>
@@ -114,7 +128,7 @@ export default function CreateRoom() {
             <button
               type="button"
               className="rounded-full bg-[#17171B] px-4 py-1.5 text-sm font-medium text-[#FFFAFA] hover:opacity-90 cursor-pointer"
-              onClick={() => setOpen(false)} // TODO: 서버 연결
+              onClick={goTempRoom} // TODO: 서버 연결
             >
               만들기
             </button>
