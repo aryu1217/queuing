@@ -1,9 +1,11 @@
+// src/components/room/queue/queue-list.jsx
 "use client";
 
 import { useState } from "react";
 import QueueCard from "./queue-card";
 import { DUMMY_QUEUE_SONGS } from "@/dummy-queue-songs";
 import { ListMusic, PlusCircle, Settings2 } from "lucide-react";
+import AddSongModal from "@/components/room/queue/add-song-modal";
 
 export default function QueueList({
   showThumbnail = true,
@@ -12,9 +14,16 @@ export default function QueueList({
   onOpenRoomQueueManage,
 }) {
   const [items] = useState(DUMMY_QUEUE_SONGS);
+  const [openAdd, setOpenAdd] = useState(false);
+
+  // 부모에서 핸들러 내려주면 그걸 쓰고, 없으면 로컬 모달을 연다.
+  const handleOpenAdd = () => {
+    if (typeof onOpenAddSong === "function") onOpenAddSong();
+    else setOpenAdd(true);
+  };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-w-0">
       {/* 헤더 */}
       <div className="mb-2 flex items-center justify-between shrink-0">
         <h3 className="text-sm font-semibold text-[#17171B]">
@@ -65,7 +74,7 @@ export default function QueueList({
 
           <button
             type="button"
-            onClick={onOpenAddSong}
+            onClick={handleOpenAdd}
             className="inline-flex items-center cursor-pointer justify-center gap-2 rounded-full bg-[#17171B]/98 px-3 py-2 text-sm font-medium text-[#FFFAFA] hover:opacity-90"
           >
             <PlusCircle className="h-4 w-4" />
@@ -73,6 +82,9 @@ export default function QueueList({
           </button>
         </div>
       </div>
+
+      {/* 링크 입력 모달 (부모 핸들러가 없을 때만 로컬로 사용) */}
+      <AddSongModal open={openAdd} onClose={() => setOpenAdd(false)} />
     </div>
   );
 }
