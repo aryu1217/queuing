@@ -2,34 +2,37 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { ChevronLeft, Copy, Check, QrCode, Users } from "lucide-react";
+import { useRouter, useParams } from "next/navigation";
+import { ChevronLeft, Copy, Check, QrCode, Users, LogOut } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 
-export default function TopBar() {
-  // 하드코딩 값
-  const title = "방제목 123";
-  const code = "E25G92Q";
-  const currentListeners = 5;
-  const maxListeners = 12;
-
+export default function TopBar({
+  title = "방제목",
+  currentListeners = 0,
+  maxListeners = 0,
+  exitHref = "/main",
+  code: codeProp, // (선택) 부모가 넘겨주면 우선 사용
+}) {
   const router = useRouter();
+  const { code: codeFromUrl } = useParams();
+  const code =
+    codeProp ??
+    (Array.isArray(codeFromUrl) ? codeFromUrl[0] : codeFromUrl) ??
+    "";
+
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const qrRef = useRef(null);
+  const leftRef = useRef(false);
 
-  // 공유 URL (클라이언트에서 계산)
   const shareUrl =
     typeof window !== "undefined"
-      ? `${window.location.origin}/r/${code}`
-      : `https://your.app/r/${code}`;
+      ? `${window.location.origin}/room/${code}`
+      : `https://your.app/room/${code}`;
 
-  // 바깥 클릭 시 QR 팝오버 닫기 + ESC 닫기
   useEffect(() => {
     const onDown = (e) => {
-      if (qrRef.current && !qrRef.current.contains(e.target)) {
-        setQrOpen(false);
-      }
+      if (qrRef.current && !qrRef.current.contains(e.target)) setQrOpen(false);
     };
     const onEsc = (e) => e.key === "Escape" && setQrOpen(false);
     document.addEventListener("mousedown", onDown);
@@ -48,6 +51,41 @@ export default function TopBar() {
     } catch {}
   }
 
+  async function leaveRoom() {
+    if (!code || leftRef.current) return;
+    leftRef.current = true;
+    try {
+      await fetch("/api/rooms/leave", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+        keepalive: true,
+      });
+    } catch {}
+    router.push(exitHref);
+  }
+
+  // 탭 닫기/뒤로가기 시 best-effort 제거
+  useEffect(() => {
+    if (!code) return;
+    const send = () => {
+      if (leftRef.current) return;
+      leftRef.current = true;
+      try {
+        navigator.sendBeacon("/api/rooms/leave", JSON.stringify({ code }));
+      } catch {}
+    };
+    const onVis = () => {
+      if (document.visibilityState === "hidden") send();
+    };
+    window.addEventListener("pagehide", send);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("pagehide", send);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [code]);
+
   return (
     <header className="sticky top-0 z-20 w-full bg-white/90 backdrop-blur border-b border-gray-200">
       <div className="mx-auto flex h-14 items-center justify-between px-4">
@@ -57,7 +95,7 @@ export default function TopBar() {
             type="button"
             onClick={() => router.back()}
             aria-label="뒤로가기"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 hover:bg-gray-50"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 hover:bg-gray-50 cursor-pointer"
           >
             <ChevronLeft className="h-5 w-5 text-[#17171B]" />
           </button>
@@ -78,7 +116,7 @@ export default function TopBar() {
               type="button"
               onClick={copyCode}
               aria-label="코드 복사"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 bg-white hover:bg-gray-50"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer"
               title="코드 복사"
             >
               {copied ? (
@@ -92,7 +130,6 @@ export default function TopBar() {
 
         {/* Right */}
         <div className="flex items-center gap-2" ref={qrRef}>
-          {/* 인원 */}
           <div className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-[#17171B]">
             <Users className="h-4 w-4" />
             <span className="tabular-nums">
@@ -100,13 +137,12 @@ export default function TopBar() {
             </span>
           </div>
 
-          {/* QR 버튼 */}
           <div className="relative">
             <button
               type="button"
               aria-label="QR 보기"
               onClick={() => setQrOpen((v) => !v)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white hover:bg-gray-50"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer"
               title="QR 코드"
             >
               <QrCode className="h-5 w-5 text-[#17171B]" />
@@ -124,6 +160,17 @@ export default function TopBar() {
               </div>
             )}
           </div>
+
+          {/* 나가기 */}
+          <button
+            type="button"
+            onClick={leaveRoom}
+            title="나가기"
+            aria-label="나가기"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer"
+          >
+            <LogOut className="h-5 w-5 text-[#17171B]" />
+          </button>
         </div>
       </div>
     </header>
