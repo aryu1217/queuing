@@ -9,21 +9,27 @@ export default function Room({ params }) {
       <TopBar />
 
       {/* 본문 영역 */}
-      <main className="flex-1 p-4 grid grid-cols-1 md:grid-cols-[320px_1fr_280px] gap-4">
+      <main
+        className="
+          flex-1 p-4 grid gap-4
+          grid-cols-1
+          lg:grid-cols-[minmax(240px,320px)_1fr_minmax(220px,280px)]
+        "
+      >
         {/* Left: Queue */}
-        <aside className="order-2 md:order-1">
+        <aside className="order-2 lg:order-1 w-full min-w-0">
           <QueueList />
         </aside>
 
         {/* Center: Player */}
-        <section className="order-1 md:order-2 flex justify-center">
+        <section className="order-1 lg:order-2 w-full min-w-0 flex justify-center">
           <div className="w-full max-w-[960px]">
             <YoutubePlayer />
           </div>
         </section>
 
         {/* Right: Participants */}
-        <aside className="order-3 md:order-3">
+        <aside className="order-3 lg:order-3 w-full min-w-0">
           <ParticipantList />
         </aside>
       </main>

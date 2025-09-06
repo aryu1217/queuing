@@ -16,7 +16,7 @@ export default function Modal({ open, onClose, children }) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4"
       onClick={onClose}
       aria-modal="true"
       role="dialog"
