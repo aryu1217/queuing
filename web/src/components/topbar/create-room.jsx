@@ -1,31 +1,80 @@
 // src/components/topbar/create-room.jsx
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Modal from "@/components/ui/modal";
-import { ArrowUpDown, PlusCircle, X } from "lucide-react";
+import { PlusCircle, X } from "lucide-react";
 import { TAG_META, tagLabel, tagClasses } from "@/constants/tags";
 import { useRouter } from "next/navigation";
+
+const MAX_TAGS = 5;
 
 export default function CreateRoom() {
   const [open, setOpen] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
-
-  // 프리셋 태그 목록
-  const tags = Object.keys(TAG_META);
-
-  const MOCK_ROOM_ID = "abc123";
-
+  const [title, setTitle] = useState("");
+  const [password, setPassword] = useState("");
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [err, setErr] = useState("");
   const router = useRouter();
 
-  const goTempRoom = () => {
-    setOpen(false);
-    // 뒤로가기로 모달 안 돌아오게 하려면 replace 사용
-    // router.replace(`/room/${MOCK_ROOM_ID}`);
-    router.push(`/room/${MOCK_ROOM_ID}`);
-    // 필요하면 쿼리도 덧붙일 수 있음: `?from=create`
-    // router.push(`/room/${MOCK_ROOM_ID}?from=create`);
-  };
+  const tags = useMemo(() => Object.keys(TAG_META), []);
+
+  function toggleTag(key) {
+    setSelectedTags((prev) => {
+      const set = new Set(prev);
+      if (set.has(key)) {
+        set.delete(key);
+      } else {
+        if (set.size >= MAX_TAGS) return prev; // 최대 개수 제한
+        set.add(key);
+      }
+      return Array.from(set);
+    });
+  }
+
+  async function onCreate() {
+    if (submitting) return; // 이미 진행 중이면 탈출
+    setSubmitting(true);
+
+    setErr("");
+    if (!title.trim()) {
+      setErr("방 이름을 입력해 주세요.");
+      return;
+    }
+    if (isPrivate && password.length < 4) {
+      setErr("비밀번호는 4자 이상이어야 합니다.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const res = await fetch("/api/rooms/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title.trim(),
+          isPrivate,
+          password: isPrivate ? password : undefined,
+          tags: selectedTags,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "방 생성에 실패했습니다.");
+
+      // 성공 → 입력 초기화 + 이동
+      setOpen(false);
+      setTitle("");
+      setPassword("");
+      setSelectedTags([]);
+      router.push(`/room/${data.room.code}`);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <>
@@ -48,7 +97,7 @@ export default function CreateRoom() {
               새 방 만들기
             </h2>
             <button
-              className="rounded-full p-1 hover:bg-gray-100"
+              className="rounded-full p-1 hover:bg-gray-100 cursor-pointer"
               onClick={() => setOpen(false)}
               aria-label="닫기"
             >
@@ -67,6 +116,8 @@ export default function CreateRoom() {
                 type="text"
                 placeholder="예) 카페 BGM"
                 className="w-full rounded-xl border border-gray-200 bg-white/80 px-3 py-2 text-sm text-[#17171B] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#17171B]/20"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
               />
             </div>
 
@@ -77,11 +128,11 @@ export default function CreateRoom() {
                 type="checkbox"
                 checked={isPrivate}
                 onChange={(e) => setIsPrivate(e.target.checked)}
-                className="h-4 w-4 accent-[#17171B]"
+                className="h-4 w-4 accent-[#17171B] cursor-pointer"
               />
             </div>
 
-            {/* 비밀번호 입력 (비공개일 때만) */}
+            {/* 비밀번호 입력 */}
             {isPrivate && (
               <div>
                 <label className="block text-sm text-gray-600 mb-1">
@@ -91,29 +142,52 @@ export default function CreateRoom() {
                   type="password"
                   placeholder="비밀번호를 입력하세요"
                   className="w-full rounded-xl border border-gray-200 bg-white/80 px-3 py-2 text-sm text-[#17171B] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#17171B]/20"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
+                <p className="mt-1 text-xs text-gray-500">4자 이상</p>
               </div>
             )}
 
-            {/* 태그 선택 */}
+            {/* 태그(옵션) */}
             <div>
-              <label className="block text-sm text-gray-600 mb-1">
-                태그(선택)
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-sm text-gray-600 mb-1">
+                  태그(선택)
+                </label>
+                <span className="text-[11px] text-gray-500">
+                  {selectedTags.length}/{MAX_TAGS}
+                </span>
+              </div>
+
               <div className="flex flex-wrap gap-2">
-                {tags.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    className={`rounded-full px-3 py-1 text-xs ${tagClasses(
-                      t
-                    )}`}
-                  >
-                    {tagLabel(t)}
-                  </button>
-                ))}
+                {tags.map((t) => {
+                  const active = selectedTags.includes(t);
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => toggleTag(t)}
+                      aria-pressed={active}
+                      className={[
+                        "rounded-full px-3 py-1 text-xs select-none transition",
+                        "cursor-pointer hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[#17171B]/20",
+                        tagClasses(t), // 기본 색
+                        active
+                          ? "ring-2 ring-[#17171B] bg-[#17171B] text-black border-transparent"
+                          : "",
+                      ].join(" ")}
+                      title={tagLabel(t)}
+                    >
+                      {tagLabel(t)}
+                    </button>
+                  );
+                })}
               </div>
             </div>
+
+            {/* 에러 */}
+            {err && <p className="text-xs text-red-500">{err}</p>}
           </div>
 
           {/* 푸터 */}
@@ -127,10 +201,11 @@ export default function CreateRoom() {
             </button>
             <button
               type="button"
-              className="rounded-full bg-[#17171B] px-4 py-1.5 text-sm font-medium text-[#FFFAFA] hover:opacity-90 cursor-pointer"
-              onClick={goTempRoom} // TODO: 서버 연결
+              disabled={submitting}
+              onClick={onCreate}
+              className="rounded-full bg-[#17171B] px-4 py-1.5 text-sm font-medium text-[#FFFAFA] hover:opacity-90 cursor-pointer disabled:opacity-60"
             >
-              만들기
+              {submitting ? "만드는 중…" : "만들기"}
             </button>
           </div>
         </div>
