@@ -1,9 +1,10 @@
-// src/app/r/[code]/page.jsx  (또는 해당 Room 파일)
+// src/app/r/[code]/page.jsx
 "use client";
 
-import { useState } from "react";
+import React, { use, useEffect, useState } from "react";
 import { useAtom } from "jotai";
 import { currentVideoIdAtom } from "@/atoms/player";
+import { createClient } from "@/utils/supabase/client";
 
 import QueueList from "@/components/room/queue/queue-list";
 import ParticipantList from "@/components/room/right-section/participant-list";
@@ -12,14 +13,61 @@ import YoutubePlayer from "@/components/room/youtube-player";
 import AddSongModal from "@/components/room/queue/add-song-modal";
 
 export default function Room({ params }) {
+  // Next 15 / React 19: params는 Promise → use()로 언랩
+  const { code } = use(params);
+
+  const supabase = createClient();
   const [openAdd, setOpenAdd] = useState(false);
   const [videoId] = useAtom(currentVideoIdAtom);
 
+  const [room, setRoom] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    let off = false;
+
+    (async () => {
+      setLoading(true);
+      setErr("");
+
+      const { data, error } = await supabase
+        .from("rooms")
+        .select(
+          `
+            id, code, title
+            
+          `
+        )
+        .eq("code", code)
+        .single();
+
+      if (off) return;
+      if (error) setErr(error.message);
+      else setRoom(data);
+      setLoading(false);
+    })();
+
+    return () => {
+      off = true;
+    };
+  }, [code, supabase]);
+
+  if (loading) {
+    return <div className="p-6">불러오는 중…</div>;
+  }
+
+  if (err || !room) {
+    return (
+      <div className="p-6 text-red-600">방 정보를 가져오지 못했어요. {err}</div>
+    );
+  }
+
   return (
     <div className="bg-white text-[#17171B] min-h-screen flex flex-col">
-      <TopBar />
+      <TopBar title={room.title ?? "방제목"} exitHref="/main" />
 
-      {/* 본문 영역 */}
+      {/* 본문 */}
       <main
         className="
           flex-1 p-4 grid gap-4
@@ -29,16 +77,12 @@ export default function Room({ params }) {
       >
         {/* Left: Queue */}
         <aside className="order-2 lg:order-1 w-full min-w-0">
-          <QueueList
-            onOpenAddSong={() => setOpenAdd(true)}
-            // onOpenMyQueue / onOpenRoomQueueManage 도 같은 패턴으로 연결 가능
-          />
+          <QueueList onOpenAddSong={() => setOpenAdd(true)} />
         </aside>
 
         {/* Center: Player */}
         <section className="order-1 lg:order-2 w-full min-w-0 flex justify-center">
           <div className="w-full max-w-[960px]">
-            {/* 전역 atom에서 읽은 videoId 전달, 자동 재생 */}
             <YoutubePlayer videoId={videoId} autoplay />
           </div>
         </section>
