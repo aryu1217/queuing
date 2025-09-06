@@ -1,7 +1,7 @@
 // src/components/room/topbar.jsx
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ChevronLeft, Copy, Check, QrCode, Users, LogOut } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
@@ -11,19 +11,14 @@ export default function TopBar({
   currentListeners = 0,
   maxListeners = 0,
   exitHref = "/main",
-  code: codeProp, // (선택) 부모가 넘겨주면 우선 사용
 }) {
   const router = useRouter();
   const { code: codeFromUrl } = useParams();
-  const code =
-    codeProp ??
-    (Array.isArray(codeFromUrl) ? codeFromUrl[0] : codeFromUrl) ??
-    "";
+  const code = Array.isArray(codeFromUrl) ? codeFromUrl[0] : codeFromUrl;
 
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const qrRef = useRef(null);
-  const leftRef = useRef(false);
 
   const shareUrl =
     typeof window !== "undefined"
@@ -45,15 +40,14 @@ export default function TopBar({
 
   async function copyCode() {
     try {
-      await navigator.clipboard.writeText(code);
+      await navigator.clipboard.writeText(String(code || ""));
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     } catch {}
   }
 
-  async function leaveRoom() {
-    if (!code || leftRef.current) return;
-    leftRef.current = true;
+  // 1) 명시적 나가기 버튼
+  const leaveNow = useCallback(async () => {
     try {
       await fetch("/api/rooms/leave", {
         method: "POST",
@@ -63,28 +57,41 @@ export default function TopBar({
       });
     } catch {}
     router.push(exitHref);
-  }
+  }, [code, exitHref, router]);
 
-  // 탭 닫기/뒤로가기 시 best-effort 제거
+  // 2) 뒤로가기 인터셉트: confirm 후 삭제 → 실제 뒤로가기
   useEffect(() => {
     if (!code) return;
-    const send = () => {
-      if (leftRef.current) return;
-      leftRef.current = true;
+
+    // 이미 가드가 올라가 있으면 다시 pushState 하지 않음
+    if (!history.state || !history.state._guard) {
+      history.pushState({ _guard: true }, "", location.href);
+    }
+
+    const onPopState = async () => {
+      const ok = window.confirm("방에서 나가시겠습니까?");
+      if (!ok) {
+        // 취소 시 가드를 다시 복구
+        if (!history.state || !history.state._guard) {
+          history.pushState({ _guard: true }, "", location.href);
+        }
+        return;
+      }
       try {
-        navigator.sendBeacon("/api/rooms/leave", JSON.stringify({ code }));
+        await fetch("/api/rooms/leave", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code }),
+          keepalive: true,
+        });
       } catch {}
+      // 가드가 1개만 존재하므로 한 번만 back
+      router.back();
     };
-    const onVis = () => {
-      if (document.visibilityState === "hidden") send();
-    };
-    window.addEventListener("pagehide", send);
-    document.addEventListener("visibilitychange", onVis);
-    return () => {
-      window.removeEventListener("pagehide", send);
-      document.removeEventListener("visibilitychange", onVis);
-    };
-  }, [code]);
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [code, router]);
 
   return (
     <header className="sticky top-0 z-20 w-full bg-white/90 backdrop-blur border-b border-gray-200">
@@ -93,7 +100,7 @@ export default function TopBar({
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={() => history.back()} // 브라우저 뒤로가기 트리거 → 위 popstate 로직이 인터셉트
             aria-label="뒤로가기"
             className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 hover:bg-gray-50 cursor-pointer"
           >
@@ -130,6 +137,7 @@ export default function TopBar({
 
         {/* Right */}
         <div className="flex items-center gap-2" ref={qrRef}>
+          {/* 인원 */}
           <div className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-[#17171B]">
             <Users className="h-4 w-4" />
             <span className="tabular-nums">
@@ -137,6 +145,7 @@ export default function TopBar({
             </span>
           </div>
 
+          {/* QR 버튼 */}
           <div className="relative">
             <button
               type="button"
@@ -161,10 +170,10 @@ export default function TopBar({
             )}
           </div>
 
-          {/* 나가기 */}
+          {/* 나가기 버튼 (즉시 삭제 후 지정 경로 이동) */}
           <button
             type="button"
-            onClick={leaveRoom}
+            onClick={leaveNow}
             title="나가기"
             aria-label="나가기"
             className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer"
