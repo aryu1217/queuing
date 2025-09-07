@@ -9,12 +9,21 @@ import { useRouter } from "next/navigation";
 
 const MAX_TAGS = 5;
 
+// 무료 구간 권장 하드캡 (서버 상황 따라 조정)
+const FREE_HARD_CAP = 50;
+// 절대 상한(보수적으로; 결제/인프라 확장 시 올리기)
+const ABSOLUTE_HARD_CAP = 200;
+
 export default function CreateRoom() {
   const [open, setOpen] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [title, setTitle] = useState("");
   const [password, setPassword] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
+
+  // ✅ 추가
+  const [maxListeners, setMaxListeners] = useState(25);
+
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState("");
   const router = useRouter();
@@ -24,10 +33,9 @@ export default function CreateRoom() {
   function toggleTag(key) {
     setSelectedTags((prev) => {
       const set = new Set(prev);
-      if (set.has(key)) {
-        set.delete(key);
-      } else {
-        if (set.size >= MAX_TAGS) return prev; // 최대 개수 제한
+      if (set.has(key)) set.delete(key);
+      else {
+        if (set.size >= MAX_TAGS) return prev;
         set.add(key);
       }
       return Array.from(set);
@@ -35,21 +43,34 @@ export default function CreateRoom() {
   }
 
   async function onCreate() {
-    if (submitting) return; // 이미 진행 중이면 탈출
+    if (submitting) return;
     setSubmitting(true);
-
     setErr("");
+
+    // --- 간단 검증 ---
     if (!title.trim()) {
       setErr("방 이름을 입력해 주세요.");
+      setSubmitting(false);
       return;
     }
     if (isPrivate && password.length < 4) {
       setErr("비밀번호는 4자 이상이어야 합니다.");
+      setSubmitting(false);
+      return;
+    }
+    const cap = Number(maxListeners);
+    if (!Number.isInteger(cap) || cap < 2) {
+      setErr("최대 인원은 2명 이상이어야 합니다.");
+      setSubmitting(false);
+      return;
+    }
+    if (cap > ABSOLUTE_HARD_CAP) {
+      setErr(`최대 인원은 ${ABSOLUTE_HARD_CAP}명을 초과할 수 없습니다.`);
+      setSubmitting(false);
       return;
     }
 
     try {
-      setSubmitting(true);
       const res = await fetch("/api/rooms/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -58,16 +79,19 @@ export default function CreateRoom() {
           isPrivate,
           password: isPrivate ? password : undefined,
           tags: selectedTags,
+          // ✅ 추가
+          maxListeners: cap,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "방 생성에 실패했습니다.");
 
-      // 성공 → 입력 초기화 + 이동
       setOpen(false);
       setTitle("");
       setPassword("");
       setSelectedTags([]);
+      setMaxListeners(25);
+      // 프로젝트 라우트에 맞춰 조정(/room vs /r)
       router.push(`/room/${data.room.code}`);
     } catch (e) {
       setErr(e.message);
@@ -78,7 +102,6 @@ export default function CreateRoom() {
 
   return (
     <>
-      {/* 방 생성 버튼 */}
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -88,10 +111,8 @@ export default function CreateRoom() {
         방생성
       </button>
 
-      {/* 모달 */}
       <Modal open={open} onClose={() => setOpen(false)}>
         <div className="p-5">
-          {/* 헤더 */}
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-[#17171B]">
               새 방 만들기
@@ -105,7 +126,6 @@ export default function CreateRoom() {
             </button>
           </div>
 
-          {/* 본문 */}
           <div className="mt-4 space-y-4">
             {/* 방 이름 */}
             <div>
@@ -149,6 +169,41 @@ export default function CreateRoom() {
               </div>
             )}
 
+            {/* ✅ 최대 인원 */}
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="block text-sm text-gray-600 mb-1">
+                  최대 인원
+                </label>
+              </div>
+
+              {/* 셀렉트 or 숫자 입력 중 택1 — 셀렉트가 UX 더 안전 */}
+              <select
+                className="w-full rounded-xl border border-gray-200 bg-white/80 px-3 py-2 text-sm text-[#17171B] focus:outline-none focus:ring-2 focus:ring-[#17171B]/20"
+                value={maxListeners}
+                onChange={(e) => setMaxListeners(Number(e.target.value))}
+                disabled={submitting}
+              >
+                {[10, 25, 50, 100, 200].map((n) => (
+                  <option key={n} value={n}>
+                    {n}명{n <= FREE_HARD_CAP ? " (무료 권장)" : ""}
+                  </option>
+                ))}
+              </select>
+
+              {/* 숫자 인풋을 쓰고 싶다면 아래 대체:
+              <input
+                type="number"
+                min={2}
+                max={ABSOLUTE_HARD_CAP}
+                step={1}
+                value={maxListeners}
+                onChange={(e) => setMaxListeners(e.target.value)}
+                className="w-full rounded-xl border border-gray-200 bg-white/80 px-3 py-2 text-sm"
+              />
+              */}
+            </div>
+
             {/* 태그(옵션) */}
             <div>
               <div className="flex items-center justify-between">
@@ -172,7 +227,7 @@ export default function CreateRoom() {
                       className={[
                         "rounded-full px-3 py-1 text-xs select-none transition",
                         "cursor-pointer hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[#17171B]/20",
-                        tagClasses(t), // 기본 색
+                        tagClasses(t),
                         active
                           ? "ring-2 ring-[#17171B] bg-[#17171B] text-black border-transparent"
                           : "",
@@ -186,11 +241,9 @@ export default function CreateRoom() {
               </div>
             </div>
 
-            {/* 에러 */}
             {err && <p className="text-xs text-red-500">{err}</p>}
           </div>
 
-          {/* 푸터 */}
           <div className="mt-6 flex justify-end gap-2">
             <button
               type="button"
