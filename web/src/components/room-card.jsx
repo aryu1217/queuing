@@ -84,7 +84,7 @@ export default function RoomCard({ room, onJoin }) {
           {isPrivate && (
             <span className="inline-flex items-center gap-1 rounded-full bg-[#17171B]/5 px-2 py-0.5 text-xs text-[#17171B] ring-1 ring-[#17171B]/15">
               <Lock className="h-3.5 w-3.5 text-[#17171B]" />
-              비공개
+              잠금
             </span>
           )}
         </div>

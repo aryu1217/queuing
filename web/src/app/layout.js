@@ -2,6 +2,7 @@ import "./globals.css";
 import Providers from "./providers"; // ← React Query Provider
 import localFont from "next/font/local";
 import { Jua } from "next/font/google";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 const jua = Jua({
   weight: ["400"],
@@ -22,7 +23,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="ko" className={`${jua.variable} ${hand.variable}`}>
       <body>
-        <Providers>{children}</Providers>
+        <Providers>
+          {children} <ReactQueryDevtools />
+        </Providers>
       </body>
     </html>
   );

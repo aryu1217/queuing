@@ -9,7 +9,7 @@ import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 
 const MAX_TAGS = 5;
-// DB 제약(rooms_tags_allowed_chk)과 반드시 동일하게 유지
+// DB 제약(rooms_tags_allowed_chk)과 반드시 동일 유지
 const ALLOWED_TAGS = new Set([
   "kpop",
   "jpop",
@@ -55,7 +55,7 @@ function makeCode(n = 6) {
 async function insertRoomWithUniqueCode(
   client,
   payload,
-  selectCols = "id, code, title, tags"
+  selectCols = "id, code, title, tags, host_nickname, is_locked, max_listeners"
 ) {
   for (let i = 0; i < 5; i++) {
     const code = makeCode();
@@ -66,6 +66,7 @@ async function insertRoomWithUniqueCode(
       .single();
 
     if (!error) return { data };
+
     const msg = (error?.message || "") + " " + (error?.details || "");
     // 고유 제약 위반(코드 중복)이면 재시도, 그 외 에러면 중단
     if (
@@ -81,7 +82,7 @@ async function insertRoomWithUniqueCode(
 }
 
 export async function POST(req) {
-  const cookieStore = await cookies();
+  const cookieStore = cookies(); // ← await 불필요
   const nicknameCookie = cookieStore.get("nickname")?.value?.trim() || "";
 
   // 입력 파싱
@@ -126,14 +127,27 @@ export async function POST(req) {
     is_locked = true;
   }
 
-  // 로그인 사용자 경로 (RLS로 insert 허용)
+  // ────────────────────────────────────────────────────────────────
+  // 로그인 사용자 (RLS 삽입)
+  // ────────────────────────────────────────────────────────────────
   if (user) {
+    // 프로필 닉네임 조회 → host_nickname 채움
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("nickname")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const hostNickname =
+      profile?.nickname?.trim() || nicknameCookie || "호스트";
+
     const { data: room, error: roomErr } = await insertRoomWithUniqueCode(
       supabase,
       {
         title,
-        host_user_id: user.id, // RLS: auth.uid()와 동일해야 insert 허용
-        is_public: !isPrivate,
+        host_user_id: user.id, // RLS: auth.uid()와 일치
+        host_nickname: hostNickname, // ★ 로그인 호스트 닉네임 저장
+        is_public: !isPrivate, // 지금은 모두 공개 운용
         is_locked,
         password_hash, // 공개 방이면 null
         tags: inputTags,
@@ -148,9 +162,14 @@ export async function POST(req) {
     }
 
     // 생성자를 멤버로 등록 (role='host')
+    // ⚠ identity_key는 generated column → 절대 명시하지 않음
     const { error: memErr } = await supabase.from("room_members").upsert(
-      { room_id: room.id, user_id: user.id, role: "host" },
-      { onConflict: "room_id,identity_key" } // ← 고유 제약과 매칭
+      {
+        room_id: room.id,
+        user_id: user.id,
+        role: "host",
+      },
+      { onConflict: "room_id,identity_key" }
     );
 
     if (memErr) {
@@ -160,7 +179,9 @@ export async function POST(req) {
     return NextResponse.json({ room }, { status: 201 });
   }
 
-  // 게스트 경로: 닉네임 쿠키 필수
+  // ────────────────────────────────────────────────────────────────
+  // 게스트 사용자 (service_role로 삽입)
+  // ────────────────────────────────────────────────────────────────
   if (!nicknameCookie) {
     return NextResponse.json(
       { error: "닉네임이 필요합니다." },
@@ -168,13 +189,12 @@ export async function POST(req) {
     );
   }
 
-  // 게스트 id 쿠키 보장
+  // guest_id 쿠키 보장
   let guestId = cookieStore.get("guest_id")?.value;
   if (!guestId) {
     guestId = randomUUID();
   }
 
-  // service_role로 RLS 우회해 안전하게 삽입
   const admin = createServiceClient();
 
   const { data: room, error: roomErr } = await insertRoomWithUniqueCode(admin, {
@@ -194,6 +214,7 @@ export async function POST(req) {
     );
   }
 
+  // 게스트 호스트 멤버 등록
   const { error: memErr } = await admin.from("room_members").upsert(
     {
       room_id: room.id,
@@ -201,14 +222,14 @@ export async function POST(req) {
       guest_nickname: nicknameCookie,
       role: "host",
     },
-    { onConflict: "room_id,identity_key" } // ← 고유 제약과 매칭
+    { onConflict: "room_id,identity_key" }
   );
 
   if (memErr) {
     return NextResponse.json({ error: memErr.message }, { status: 400 });
   }
 
-  // guest_id 쿠키 설정(없으면 신규로 심음)
+  // guest_id 쿠키 설정
   const res = NextResponse.json({ room }, { status: 201 });
   res.cookies.set("guest_id", guestId, {
     httpOnly: true,
