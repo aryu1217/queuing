@@ -1,26 +1,57 @@
+// src/components/header.jsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { useMyProfile } from "@/hooks/useMyProfile";
 import Cookies from "js-cookie";
-import { Music2, Power } from "lucide-react";
+import { Power } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Spinner from "./ui/spinner";
 import SearchBar from "./topbar/search-bar";
 import Image from "next/image";
+import { createClient } from "@/utils/supabase/client";
 
 export default function Header() {
   const { data: profile, isLoading, isError, error } = useMyProfile();
   const [open, setOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const wrapRef = useRef(null);
 
   const router = useRouter();
 
-  function handleLogout() {
-    Cookies.remove("nickname", { path: "/" });
-    fetch("/api/auth/signOut", { method: "POST" }).finally(() =>
-      router.replace("/login")
-    );
+  async function handleLogout() {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      // 게스트 닉네임 쿠키 즉시 제거
+      Cookies.remove("nickname", { path: "/" });
+
+      // 서버 세션 쿠키 제거 (반드시 대기)
+      await fetch("/api/auth/signOut", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        cache: "no-store",
+      }).catch(() => {});
+
+      // (보강) 클라이언트 세션도 종료
+      try {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+      } catch {}
+    } finally {
+      // 로그인 화면으로 이동 + RSC 경계 갱신
+      const loginUrl = "/login";
+      router.replace(loginUrl);
+      router.refresh();
+      // 혹시 라우팅이 막히면 하드 네비로 백업
+      setTimeout(() => {
+        if (window.location.pathname !== loginUrl) {
+          window.location.assign(loginUrl);
+        }
+      }, 60);
+      setLoggingOut(false);
+    }
   }
 
   useEffect(() => {
@@ -95,7 +126,9 @@ export default function Header() {
                     setOpen(false);
                     handleLogout();
                   }}
-                  className="w-full flex items-center gap-2 px-4 py-3 text-red-600 hover:bg-red-50/90 transition-colors cursor-pointer"
+                  disabled={loggingOut}
+                  aria-busy={loggingOut}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-red-600 hover:bg-red-50/90 transition-colors cursor-pointer disabled:opacity-60"
                 >
                   <Power className="w-5 h-5" />
                   로그아웃
