@@ -1,4 +1,4 @@
-// src/app/r/[code]/page.jsx
+// src/app/room/[code]/page.jsx
 "use client";
 
 import React, { use, useEffect, useState } from "react";
@@ -21,13 +21,71 @@ export default function Room({ params }) {
 
   const [room, setRoom] = useState(null);
   const [memberCount, setMemberCount] = useState(0);
-  const [participants, setParticipants] = useState([]); // ✅ 참가자 목록
+  const [participants, setParticipants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
+  // 멤버 → UI 매핑 함수
+  const mapMembers = async (roomId, members) => {
+    const userIds = members.filter((m) => m.user_id).map((m) => m.user_id);
+    let profilesMap = new Map();
+    if (userIds.length) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, nickname, avatar_url")
+        .in("id", userIds);
+      (profs || []).forEach((p) => profilesMap.set(p.id, p));
+    }
+
+    const mapped = members.map((m) => {
+      const p = m.user_id ? profilesMap.get(m.user_id) : null;
+      const nickname = p?.nickname || m.guest_nickname || "사용자";
+      return {
+        id: m.id,
+        nickname,
+        name: nickname,
+        displayName: nickname,
+        avatarUrl: p?.avatar_url || null,
+        role: m.role,
+        isHost: m.role === "host",
+        isGuest: !!m.guest_id,
+        userId: m.user_id,
+        guestId: m.guest_id,
+      };
+    });
+
+    mapped.sort((a, b) => (a.isHost === b.isHost ? 0 : a.isHost ? -1 : 1));
+    return mapped;
+  };
+
   useEffect(() => {
     let off = false;
-    let channel; // (옵션) realtime
+    let channel = null;
+
+    const refreshAll = async (roomId) => {
+      // 카운트 + 멤버 동시 갱신
+      const [{ count }, { data: ms, error: mErr }] = await Promise.all([
+        supabase
+          .from("room_members")
+          .select("id", { count: "exact", head: true })
+          .eq("room_id", roomId),
+        supabase
+          .from("room_members")
+          .select("id, user_id, guest_id, guest_nickname, role, created_at")
+          .eq("room_id", roomId),
+      ]);
+
+      if (mErr) {
+        if (!off) setErr(mErr.message);
+        return;
+      }
+
+      if (!off) {
+        setMemberCount(count ?? 0);
+        const mapped = await mapMembers(roomId, ms || []);
+        setParticipants(mapped);
+      }
+    };
 
     async function fetchAll() {
       setLoading(true);
@@ -48,101 +106,42 @@ export default function Room({ params }) {
       }
       setRoom(r);
 
-      // 2) 멤버 수 (count-only)
-      const { count, error: cErr } = await supabase
-        .from("room_members")
-        .select("id", { count: "exact", head: true })
-        .eq("room_id", r.id);
+      // 2) 초기 데이터 로드
+      await refreshAll(r.id);
 
-      if (!off) {
-        if (cErr) setErr(cErr.message);
-        setMemberCount(count ?? 0);
-      }
-
-      // 3) 참가자 목록
-      const { data: members, error: mErr } = await supabase
-        .from("room_members")
-        .select("id, user_id, guest_id, guest_nickname, role")
-        .eq("room_id", r.id);
-
-      if (off) return;
-      if (mErr) {
-        setErr(mErr.message);
-        setParticipants([]);
-        setLoading(false);
-        return;
-      }
-
-      // 로그인 유저들의 프로필 닉네임/아바타 보강 (FK 없을 수 있으니 별도 조회)
-      const userIds = members.filter((m) => m.user_id).map((m) => m.user_id);
-      let profilesMap = new Map();
-      if (userIds.length) {
-        const { data: profs } = await supabase
-          .from("profiles")
-          .select("id, nickname, avatar_url")
-          .in("id", userIds);
-
-        (profs || []).forEach((p) => profilesMap.set(p.id, p));
-      }
-
-      const mapped = members.map((m) => {
-        const p = m.user_id ? profilesMap.get(m.user_id) : null;
-        const nickname = p?.nickname || m.guest_nickname || "사용자";
-        return {
-          id: m.id,
-          // 널-safe로 ParticipantCard 호환성 보장
-          nickname,
-          name: nickname,
-          displayName: nickname,
-          avatarUrl: p?.avatar_url || null,
-          role: m.role,
-          isHost: m.role === "host",
-          isGuest: !!m.guest_id,
-          userId: m.user_id,
-          guestId: m.guest_id,
-        };
-      });
-
-      if (!off) {
-        // 호스트 우선 정렬
-        mapped.sort((a, b) => (a.isHost === b.isHost ? 0 : a.isHost ? -1 : 1));
-        setParticipants(mapped);
-        setLoading(false);
-      }
-
-      // 4) (옵션) 실시간 갱신
-      // 필요하면 주석 해제
-      /*
-      const refresh = async () => {
-        const { count: newCount } = await supabase
-          .from("room_members")
-          .select("id", { count: "exact", head: true })
-          .eq("room_id", r.id);
-        setMemberCount(newCount ?? 0);
-
-        const { data: ms } = await supabase
-          .from("room_members")
-          .select("id, user_id, guest_id, guest_nickname, role")
-          .eq("room_id", r.id);
-        // (위와 동일 매핑)
-        // ...생략 (필요 시 함수로 빼도 됨)
-      };
-
+      // 3) 실시간 구독 (room_members + rooms)
       channel = supabase
-        .channel(`room-members:${r.id}`)
+        .channel(`room:${r.id}`)
         .on(
           "postgres_changes",
-          { event: "*", schema: "public", table: "room_members", filter: `room_id=eq.${r.id}` },
-          () => { refresh(); }
+          {
+            event: "*",
+            schema: "public",
+            table: "room_members",
+            filter: `room_id=eq.${r.id}`,
+          },
+          () => refreshAll(r.id)
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "rooms",
+            filter: `id=eq.${r.id}`,
+          },
+          () => refreshAll(r.id)
         )
         .subscribe();
-      */
+
+      if (!off) setLoading(false);
     }
 
-    fetchAll();
+    if (code) fetchAll();
+
     return () => {
       off = true;
-      // if (channel) supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [code, supabase]);
 
@@ -173,7 +172,6 @@ export default function Room({ params }) {
         </section>
 
         <aside className="order-3 lg:order-3 w-full min-w-0">
-          {/* ✅ 실제 참가자 전달 */}
           <ParticipantList users={participants} />
         </aside>
       </main>

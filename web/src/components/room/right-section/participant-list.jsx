@@ -1,9 +1,8 @@
 "use client";
 
 import ParticipantCard from "./participant-card";
-import { DUMMY_PARTICIPANTS } from "@/dummy-users";
 
-export default function ParticipantList({ users = DUMMY_PARTICIPANTS }) {
+export default function ParticipantList({ users = [] }) {
   return (
     <div className="flex flex-col h-full">
       {/* 헤더 */}
