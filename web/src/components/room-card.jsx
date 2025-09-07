@@ -3,6 +3,8 @@
 
 import { Music2, Users2, Lock } from "lucide-react";
 import { TAG_META, tagClasses, tagLabel } from "@/constants/tags";
+import { joinRoom } from "@/lib/joinRoom";
+import { useRouter } from "next/navigation";
 
 // 레이블/변형값을 TAG_META의 정식 키로 정규화
 function normalizeTagKey(input) {
@@ -42,6 +44,8 @@ function normalizeTagKey(input) {
 }
 
 export default function RoomCard({ room, onJoin }) {
+  const router = useRouter();
+
   const {
     title,
     hostNickname,
@@ -51,6 +55,7 @@ export default function RoomCard({ room, onJoin }) {
     capacity,
     isUnlimited = false,
     nowPlaying,
+    code, // joinRoom에 필요
   } = room;
 
   const normalizedTags = Array.isArray(tags)
@@ -67,6 +72,25 @@ export default function RoomCard({ room, onJoin }) {
         ((nowPlaying.positionMs ?? 0) / (nowPlaying.durationSec * 1000)) * 100
       )
     : 0;
+
+  // 내부 입장 로직 (항상 실행)
+  const handleJoin = async (r) => {
+    try {
+      let password;
+      if (r.isPrivate) {
+        password = window.prompt("비밀번호를 입력하세요") || "";
+      }
+      const data = await joinRoom({ code: r.code ?? code, password });
+      // 성공 시 이동
+      if (data?.room?.code) {
+        router.push(`/room/${data.room.code}`);
+      }
+      return data; // onJoin 콜백에서 쓰게 반환
+    } catch (e) {
+      alert(e.message || "입장에 실패했어요.");
+      return null;
+    }
+  };
 
   return (
     <div
@@ -95,7 +119,7 @@ export default function RoomCard({ room, onJoin }) {
           <span className="font-medium text-gray-700">{hostNickname}</span>
         </p>
 
-        {/* 현재 재생 */}
+        {/* 현재 재생 (기존 박스 UI 유지) */}
         {nowPlaying && (
           <div className="mt-3 rounded-xl bg-gray-50 p-3 ring-1 ring-gray-100">
             <div className="flex items-center gap-2 text-sm text-gray-800">
@@ -121,9 +145,7 @@ export default function RoomCard({ room, onJoin }) {
             {normalizedTags.map((k) => (
               <span
                 key={k}
-                className={`rounded-full px-2 py-0.5 text-xs ring-1 ring-gray-200 ${tagClasses(
-                  k
-                )}`}
+                className={`rounded-full px-2 py-0.5 text-xs  ${tagClasses(k)}`}
                 title={tagLabel(k)}
               >
                 {tagLabel(k)}
@@ -155,7 +177,13 @@ export default function RoomCard({ room, onJoin }) {
           </div>
 
           <button
-            onClick={() => !isFull && onJoin?.(room)}
+            onClick={async () => {
+              if (isFull) return;
+              const result = await handleJoin(room); // ← 항상 내부 join 실행
+              if (result && typeof onJoin === "function") {
+                onJoin(result); // 선택: 부모에서 후속처리 할 수 있게 콜백
+              }
+            }}
             disabled={isFull && !isUnlimited}
             className={[
               "rounded-full px-4 py-1.5 text-xs font-medium transition focus:outline-none",
