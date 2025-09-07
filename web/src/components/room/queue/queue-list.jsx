@@ -16,7 +16,6 @@ export default function QueueList({
   const [items] = useState(DUMMY_QUEUE_SONGS);
   const [openAdd, setOpenAdd] = useState(false);
 
-  // 부모에서 핸들러 내려주면 그걸 쓰고, 없으면 로컬 모달을 연다.
   const handleOpenAdd = () => {
     if (typeof onOpenAddSong === "function") onOpenAddSong();
     else setOpenAdd(true);
