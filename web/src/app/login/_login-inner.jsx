@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Cookies from "js-cookie";
 import { createClient } from "@/utils/supabase/client";
 import { useMyProfile } from "@/hooks/useMyProfile";
+import Spinner from "@/components/ui/spinner";
 
 export default function LoginInner() {
   const supabase = createClient();
@@ -22,7 +23,12 @@ export default function LoginInner() {
     if (Cookies.get("nickname")) router.replace("/main");
   }, [isLoading, profile, router]);
 
-  if (isLoading) return <div>확인 중...</div>;
+  if (isLoading)
+    return (
+      <div className="grid h-screen place-items-center px-4 pt-5 bg-[#FFFFFF]">
+        <Spinner />
+      </div>
+    );
 
   const nicknameRegex = /^[가-힣a-zA-Z0-9_-]{1,8}$/;
   const validateNickname = (v) =>
