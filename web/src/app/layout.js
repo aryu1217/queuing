@@ -22,7 +22,7 @@ const hand = localFont({
 export default function RootLayout({ children }) {
   return (
     <html lang="ko" className={`${jua.variable} ${hand.variable}`}>
-      <body>
+      <body className="bg-[#FFFFFF] h-screen">
         <Providers>
           {children} <ReactQueryDevtools />
         </Providers>

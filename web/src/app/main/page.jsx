@@ -12,7 +12,12 @@ import Cookies from "js-cookie";
 export default function MainPage() {
   const { data: profile, isLoading, isError, error } = useMyProfile();
 
-  if (isLoading) return <Spinner />;
+  if (isLoading)
+    return (
+      <div className="grid h-screen place-items-center px-4 pt-5 bg-[#FFFFFF]">
+        <Spinner />
+      </div>
+    );
   if (isError)
     return <div className="p-6 text-red-500">에러: {error.message}</div>;
 
