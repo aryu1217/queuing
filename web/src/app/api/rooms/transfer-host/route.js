@@ -1,7 +1,7 @@
-// src/app/api/rooms/transfer-host/route.js
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 
 export async function POST(req) {
@@ -24,24 +24,33 @@ export async function POST(req) {
     );
   }
 
-  // 로그인 필요 (RPC에서도 auth.uid() 체크하지만 프리체크)
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json(
-      { error: "로그인이 필요합니다." },
-      { status: 401 }
-    );
-  }
+  // ✅ 로그인 여부 상관없이 진행: 게스트 식별용 쿠키도 함께 전달
+  const c = cookies();
+  const guestId = c.get("guest_id")?.value || c.get("guestId")?.value || null;
+  const nickname = c.get("nickname")?.value || null;
 
   const { error } = await supabase.rpc("transfer_host", {
     p_room_id: roomId,
     p_target_member_id: targetMemberId,
+    p_caller_guest_id: guestId, // 게스트일 경우 검증용
+    p_caller_nickname: nickname, // (폴백) 닉네임 쿠키만 있는 경우
   });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    const msg = error.message || "";
+    if (msg.includes("NOT_HOST")) {
+      return NextResponse.json(
+        { error: "방장만 가능합니다." },
+        { status: 403 }
+      );
+    }
+    if (msg.includes("TARGET_NOT_FOUND")) {
+      return NextResponse.json(
+        { error: "대상 멤버를 찾을 수 없습니다." },
+        { status: 404 }
+      );
+    }
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 
   return NextResponse.json({ ok: true });

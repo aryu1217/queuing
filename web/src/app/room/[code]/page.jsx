@@ -1,16 +1,17 @@
-// src/app/room/[code]/page.jsx
 "use client";
 
 import React, { use, useEffect, useState } from "react";
 import { useAtom } from "jotai";
 import { currentVideoIdAtom } from "@/atoms/player";
 import { createClient } from "@/utils/supabase/client";
+import Cookies from "js-cookie";
 
 import QueueList from "@/components/room/queue/queue-list";
 import ParticipantList from "@/components/room/right-section/participant-list";
 import TopBar from "@/components/room/top-bar";
 import YoutubePlayer from "@/components/room/youtube-player";
 import AddSongModal from "@/components/room/queue/add-song-modal";
+import Spinner from "@/components/ui/spinner";
 
 export default function Room({ params }) {
   const { code } = use(params);
@@ -24,6 +25,10 @@ export default function Room({ params }) {
   const [participants, setParticipants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+
+  // 내가 방장인지 및 진행 중 타겟
+  const [isMeHost, setIsMeHost] = useState(false);
+  const [busyMemberId, setBusyMemberId] = useState(null);
 
   // 멤버 → UI 매핑 함수
   const mapMembers = async (roomId, members) => {
@@ -41,7 +46,7 @@ export default function Room({ params }) {
       const p = m.user_id ? profilesMap.get(m.user_id) : null;
       const nickname = p?.nickname || m.guest_nickname || "사용자";
       return {
-        id: m.id,
+        id: m.id, // <- room_members.id (API에 보낼 타겟)
         nickname,
         name: nickname,
         displayName: nickname,
@@ -63,7 +68,6 @@ export default function Room({ params }) {
     let channel = null;
 
     const refreshAll = async (roomId) => {
-      // 카운트 + 멤버 동시 갱신
       const [{ count }, { data: ms, error: mErr }] = await Promise.all([
         supabase
           .from("room_members")
@@ -82,6 +86,32 @@ export default function Room({ params }) {
 
       if (!off) {
         setMemberCount(count ?? 0);
+
+        // 내가 누구인지 판별 (로그인 or 게스트)
+        const {
+          data: { user: authUser },
+        } = await supabase.auth
+          .getUser()
+          .catch(() => ({ data: { user: null } }));
+
+        const guestIdCookie =
+          (typeof document !== "undefined" &&
+            (Cookies.get("guest_id") || Cookies.get("guestId"))) ||
+          "";
+        const nicknameCookie =
+          (typeof document !== "undefined" && Cookies.get("nickname")) || "";
+
+        const meRow = (ms || []).find(
+          (m) =>
+            (authUser?.id && m.user_id === authUser.id) ||
+            (guestIdCookie && m.guest_id === guestIdCookie) ||
+            (!guestIdCookie &&
+              nicknameCookie &&
+              m.guest_nickname === nicknameCookie)
+        );
+
+        setIsMeHost(meRow?.role === "host");
+
         const mapped = await mapMembers(roomId, ms || []);
         setParticipants(mapped);
       }
@@ -91,7 +121,6 @@ export default function Room({ params }) {
       setLoading(true);
       setErr("");
 
-      // 1) 방 정보
       const { data: r, error: rErr } = await supabase
         .from("rooms")
         .select("id, code, title, max_listeners")
@@ -106,10 +135,8 @@ export default function Room({ params }) {
       }
       setRoom(r);
 
-      // 2) 초기 데이터 로드
       await refreshAll(r.id);
 
-      // 3) 실시간 구독 (room_members + rooms)
       channel = supabase
         .channel(`room:${r.id}`)
         .on(
@@ -145,7 +172,41 @@ export default function Room({ params }) {
     };
   }, [code, supabase]);
 
-  if (loading) return <div className="p-6">불러오는 중…</div>;
+  // 방장 넘기기 호출
+  const handleTransferHost = async (targetMemberId) => {
+    if (!room?.id || !targetMemberId || busyMemberId) return;
+    const ok = window.confirm("해당 참가자에게 방장을 넘길까요?");
+    if (!ok) return;
+
+    setBusyMemberId(targetMemberId);
+    try {
+      const res = await fetch("/api/rooms/transfer-host", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomId: room.id,
+          targetMemberId,
+        }),
+      });
+
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || `HTTP ${res.status}`);
+      }
+      // 성공 시 rooms/room_members 구독이 알아서 갱신함
+    } catch (e) {
+      alert(`방장 넘기기 실패: ${e.message}`);
+    } finally {
+      setBusyMemberId(null);
+    }
+  };
+
+  if (loading)
+    return (
+      <div className="grid h-screen place-items-center px-4 pt-5 bg-[#FFFFFF]">
+        <Spinner />
+      </div>
+    );
   if (err || !room)
     return (
       <div className="p-6 text-red-600">방 정보를 가져오지 못했어요. {err}</div>
@@ -172,7 +233,12 @@ export default function Room({ params }) {
         </section>
 
         <aside className="order-3 lg:order-3 w-full min-w-0">
-          <ParticipantList users={participants} />
+          <ParticipantList
+            users={participants}
+            isMeHost={isMeHost}
+            onTransferHost={handleTransferHost}
+            busyMemberId={busyMemberId}
+          />
         </aside>
       </main>
 
