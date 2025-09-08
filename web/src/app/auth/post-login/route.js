@@ -6,7 +6,6 @@ import { createClient } from "@/utils/supabase/server";
 
 function normalizeNextParam(url) {
   const raw = url.searchParams.get("next") || "/main";
-  // 절대 URL, 프로토콜-상대 //url, 빈 값은 차단 → 기본값
   if (
     !raw ||
     raw.startsWith("http://") ||
@@ -15,15 +14,16 @@ function normalizeNextParam(url) {
   ) {
     return "/main";
   }
-  // 쿼리만 들어와도 안전하게 처리
   return raw.startsWith("/") ? raw : `/${raw}`;
 }
+
+const PLACEHOLDER_HOST = "yourcdn.com/default-avatar.png"; // 기존 플레이스홀더 식별용
 
 export async function GET(req) {
   const requestUrl = new URL(req.url);
   const supabase = await createClient();
 
-  // 1) OAuth code → 세션 교환 (실패 시 로그인으로)
+  // 1) code → 세션 교환
   const code = requestUrl.searchParams.get("code");
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
@@ -33,7 +33,7 @@ export async function GET(req) {
     }
   }
 
-  // 2) 유저 확인
+  // 2) 유저
   const {
     data: { user },
     error: userErr,
@@ -43,17 +43,43 @@ export async function GET(req) {
     return NextResponse.redirect(new URL("/login", requestUrl));
   }
 
-  // 3) 닉네임 존재 여부에 따라 분기
+  // 3) 프로필 조회
   const { data: profile, error: profErr } = await supabase
     .from("profiles")
-    .select("nickname")
+    .select("nickname, avatar_url")
     .eq("id", user.id)
     .maybeSingle();
   if (profErr) console.error("[post-login] profile error:", profErr.message);
 
+  // 4) 구글 아바타 확보 (picture 또는 avatar_url)
+  const meta = user.user_metadata || {};
+  const providerAvatar = meta.picture || meta.avatar_url || null;
+
+  // 5) avatar_url 채우기: 없거나 플레이스홀더(또는 따옴표 포함)일 때만 업데이트
+  if (providerAvatar) {
+    const current = profile?.avatar_url || "";
+    const isPlaceholder =
+      !current ||
+      current.includes(PLACEHOLDER_HOST) ||
+      /^'+https?:\/\//.test(current); // 따옴표로 저장된 케이스
+
+    if (isPlaceholder) {
+      const clean = String(providerAvatar).replace(/^'+|'+$/g, ""); // 혹시 모를 따옴표 제거
+      const upsertPayload = { id: user.id, avatar_url: clean };
+
+      await supabase
+        .from("profiles")
+        .upsert(upsertPayload, { onConflict: "id" }); // RLS: auth.uid() = id 정책이면 OK
+    }
+  } else if (!profile) {
+    // 프로필 자체가 없고 provider 사진도 없다면 최소 row만 생성
+    await supabase
+      .from("profiles")
+      .upsert({ id: user.id }, { onConflict: "id" });
+  }
+
+  // 6) 리디렉트 분기
   const safeNext = normalizeNextParam(requestUrl);
   const dest = profile?.nickname ? safeNext : "/login/createNickname";
-
-  // ✅ 현재 요청의 origin을 기준으로 리디렉트 (로컬/배포 모두 OK)
   return NextResponse.redirect(new URL(dest, requestUrl));
 }
