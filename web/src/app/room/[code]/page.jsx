@@ -12,9 +12,10 @@ import TopBar from "@/components/room/top-bar";
 import YoutubePlayer from "@/components/room/youtube-player";
 import AddSongModal from "@/components/room/queue/add-song-modal";
 import Spinner from "@/components/ui/spinner";
+import { useParams } from "next/navigation";
 
 export default function Room({ params }) {
-  const { code } = use(params);
+  const { code } = useParams();
   const supabase = createClient();
 
   const [openAdd, setOpenAdd] = useState(false);

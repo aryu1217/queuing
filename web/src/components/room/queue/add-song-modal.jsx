@@ -31,7 +31,11 @@ export default function AddSongModal({ open, onClose }) {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "링크를 확인해 주세요.");
+      if (!res.ok) {
+        console.error("[resolve ERR]", res.status, data);
+        throw new Error(data?.error || "링크를 확인해 주세요.");
+      }
+      console.log("[resolve OK]", data);
 
       setVideoId(data.videoId);
       onClose?.();
