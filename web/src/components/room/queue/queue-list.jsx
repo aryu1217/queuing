@@ -1,11 +1,12 @@
-// src/components/room/queue/queue-list.jsx
 "use client";
 
 import { useState } from "react";
+import { useAtomValue } from "jotai";
+import { myQueueAtom } from "@/atoms/queue";
 import QueueCard from "./queue-card";
-import { DUMMY_QUEUE_SONGS } from "@/dummy-queue-songs";
 import { ListMusic, PlusCircle, Settings2 } from "lucide-react";
 import AddSongModal from "@/components/room/queue/add-song-modal";
+import MyQueueManageModal from "@/components/room/queue/my-queue-manage-modal";
 
 export default function QueueList({
   showThumbnail = true,
@@ -13,12 +14,18 @@ export default function QueueList({
   onOpenAddSong,
   onOpenRoomQueueManage,
 }) {
-  const [items] = useState(DUMMY_QUEUE_SONGS);
+  const items = useAtomValue(myQueueAtom); // ✅ atom을 단일 소스로 사용
   const [openAdd, setOpenAdd] = useState(false);
+  const [openMyQueue, setOpenMyQueue] = useState(false);
 
   const handleOpenAdd = () => {
     if (typeof onOpenAddSong === "function") onOpenAddSong();
     else setOpenAdd(true);
+  };
+
+  const handleOpenMyQueue = () => {
+    if (typeof onOpenMyQueue === "function") onOpenMyQueue();
+    else setOpenMyQueue(true);
   };
 
   return (
@@ -39,7 +46,7 @@ export default function QueueList({
         </button>
       </div>
 
-      {/* 리스트: 최대 높이 넘으면 스크롤 */}
+      {/* 리스트 */}
       <div className="flex-1 overflow-y-auto max-h-[350px] pr-1">
         {items.map((t, i) => (
           <QueueCard
@@ -64,7 +71,7 @@ export default function QueueList({
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <button
             type="button"
-            onClick={onOpenMyQueue}
+            onClick={handleOpenMyQueue}
             className="inline-flex items-center cursor-pointer justify-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-[#17171B] hover:bg-gray-50"
           >
             <ListMusic className="h-4 w-4" />
@@ -82,8 +89,12 @@ export default function QueueList({
         </div>
       </div>
 
-      {/* 링크 입력 모달 (부모 핸들러가 없을 때만 로컬로 사용) */}
+      {/* 모달들 */}
       <AddSongModal open={openAdd} onClose={() => setOpenAdd(false)} />
+      <MyQueueManageModal
+        open={openMyQueue}
+        onClose={() => setOpenMyQueue(false)}
+      />
     </div>
   );
 }

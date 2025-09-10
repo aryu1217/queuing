@@ -2,6 +2,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useSetAtom } from "jotai";
+import { advanceQueueAtom } from "@/atoms/queue";
 import Spinner from "../ui/spinner";
 
 export default function YoutubePlayer({ videoId, autoplay = false }) {
@@ -10,11 +12,11 @@ export default function YoutubePlayer({ videoId, autoplay = false }) {
   const playerRef = useRef(null);
   const [currentTitle, setCurrentTitle] = useState("");
   const [apiReady, setApiReady] = useState(false);
+  const advanceQueue = useSetAtom(advanceQueueAtom);
 
-  // 1) IFrame API 로드 (한 번만)
+  // IFrame API 로드
   useEffect(() => {
     let cancelled = false;
-
     function loadAPI() {
       return new Promise((resolve) => {
         if (window.YT?.Player) return resolve(window.YT);
@@ -31,29 +33,25 @@ export default function YoutubePlayer({ videoId, autoplay = false }) {
         }
       });
     }
-
     (async () => {
       await loadAPI();
       if (!cancelled) setApiReady(true);
     })();
-
     return () => {
       cancelled = true;
     };
   }, []);
 
-  // 2) Player 생성 (한 번만)
+  // Player 생성(1회)
   useEffect(() => {
     if (!apiReady || !mountRef.current || playerRef.current) return;
-
     const YT = window.YT;
     playerRef.current = new YT.Player(mountRef.current, {
-      // 처음엔 videoId 없이 생성해도 됨
       host: "https://www.youtube.com",
       width: "100%",
       height: "100%",
       playerVars: {
-        autoplay: 0, // 최초엔 0, 실제 재생은 아래 loadVideoById에서 처리
+        autoplay: 0,
         playsinline: 1,
         rel: 0,
         modestbranding: 1,
@@ -64,19 +62,24 @@ export default function YoutubePlayer({ videoId, autoplay = false }) {
         onReady: (e) => {
           sizeToContainer();
           try {
-            const data = e.target.getVideoData();
-            if (data?.title) setCurrentTitle(data.title);
+            const d = e.target.getVideoData();
+            if (d?.title) setCurrentTitle(d.title);
           } catch {}
         },
         onStateChange: (e) => {
+          const YT = window.YT;
           if (
             e.data === YT.PlayerState.CUED ||
             e.data === YT.PlayerState.PLAYING
           ) {
             try {
-              const data = e.target.getVideoData();
-              if (data?.title) setCurrentTitle(data.title);
+              const d = e.target.getVideoData();
+              if (d?.title) setCurrentTitle(d.title);
             } catch {}
+          }
+          if (e.data === YT.PlayerState.ENDED) {
+            // ✅ 현재 곡 종료 → 다음 곡 재생
+            advanceQueue();
           }
         },
       },
@@ -98,27 +101,22 @@ export default function YoutubePlayer({ videoId, autoplay = false }) {
       if (playerRef.current?.destroy) playerRef.current.destroy();
       playerRef.current = null;
     };
-  }, [apiReady]);
+  }, [apiReady, advanceQueue]);
 
-  // 3) videoId가 바뀔 때마다 로드
+  // videoId 변경 시 로드
   useEffect(() => {
     const p = playerRef.current;
-    if (!p) return;
-    if (!videoId || typeof videoId !== "string") return; // null/빈 값이면 무시
-
+    if (!p || !videoId) return;
     try {
-      // 자동재생 정책 회피
       p.mute?.();
       p.loadVideoById(videoId);
       if (autoplay) p.playVideo?.();
-      // 살짝 딜레이 뒤에 unMute
       setTimeout(() => {
         try {
           p.unMute?.();
         } catch {}
       }, 150);
-    } catch (e) {
-      // 실패 시 마지막 수단으로 cue 후 play
+    } catch {
       try {
         p.cueVideoById?.(videoId);
         if (autoplay) p.playVideo?.();
@@ -134,16 +132,13 @@ export default function YoutubePlayer({ videoId, autoplay = false }) {
       >
         <div ref={mountRef} className="absolute inset-0" />
       </div>
-
-      <div className="mt-3 text-sm text-[#17171B]">
+      <div className="mt-3 text-sm text-[#17171B] ">
         {currentTitle ? (
           <span className="font-medium">{currentTitle}</span>
         ) : (
           <div className="inline-flex items-center gap-2">
             <Spinner />
-            <span className="text-gray-500 whitespace-nowrap">
-              노래 정보를 불러오는 중…
-            </span>
+            <span className="text-gray-500">노래 정보를 불러오는 중…</span>
           </div>
         )}
       </div>

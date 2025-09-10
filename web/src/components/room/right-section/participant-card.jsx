@@ -9,7 +9,6 @@ export default function ParticipantCard({
   busy = false,
 }) {
   const showTransfer = isMeHost && !user.isHost; // 내가 방장이고, 대상이 방장이 아닐 때만
-  console.log(user);
 
   return (
     <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2">
